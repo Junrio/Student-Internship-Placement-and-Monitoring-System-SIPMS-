@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getUserById, getUserByEmail } from "@/db/queries/users"
+import { getUserById } from "@/db/queries/users"
 import { getInternshipsByStudent } from "@/db/queries/internships"
 import { getEvaluationsByStudent } from "@/db/queries/evaluations"
 import { getCompanyById } from "@/db/queries/companies"
-import { getAttendanceByInternship } from "@/db/queries/attendance"
 import { updateUser } from "@/db/queries/users"
 import { updateInternship } from "@/db/queries/internships"
 import { revalidatePath } from "next/cache"
@@ -25,95 +24,24 @@ export async function GET(
       return NextResponse.json({ error: "Student not found" }, { status: 404 })
     }
 
-    // Get all internships
-    const allInternships = await getInternshipsByStudent(studentId)
-    const activeInternship = allInternships.find((i) => i.status === "active")
+    // Get internships
+    const internships = await getInternshipsByStudent(studentId)
+    const activeInternship = internships.find((i) => i.status === "active")
+    const company = activeInternship ? await getCompanyById(activeInternship.companyId) : null
+    const supervisor = activeInternship
+      ? await getUserById(activeInternship.supervisorId)
+      : null
 
-    // Get all internships with full details
-    const internshipsWithDetails = await Promise.all(
-      allInternships.map(async (internship) => {
-        const company = await getCompanyById(internship.companyId)
-        const supervisor = await getUserById(internship.supervisorId)
-        const attendance = await getAttendanceByInternship(internship.id)
-        
-        // Calculate attendance summary
-        const presentCount = attendance.filter((r) => r.status === "present").length
-        const absentCount = attendance.filter((r) => r.status === "absent").length
-        const leaveCount = attendance.filter((r) => r.status === "leave").length
-        const totalDays = presentCount + absentCount + leaveCount
-        const attendancePercentage = totalDays > 0 ? ((presentCount / totalDays) * 100).toFixed(1) : "0"
-
-        return {
-          id: internship.id,
-          internshipId: internship.internshipId,
-          position: internship.position,
-          department: internship.department,
-          startDate: internship.startDate,
-          endDate: internship.endDate,
-          status: internship.status,
-          description: internship.description || "",
-          responsibilities: internship.responsibilities || [],
-          requirements: internship.requirements || [],
-          createdAt: internship.createdAt,
-          updatedAt: internship.updatedAt,
-          company: company
-            ? {
-                id: company.id,
-                name: company.name,
-                email: company.email,
-                phone: company.phone,
-                address: company.address,
-                city: company.city,
-                state: company.state,
-                country: company.country,
-                industry: company.industry,
-                website: company.website || "",
-              }
-            : null,
-          supervisor: supervisor
-            ? {
-                id: supervisor.id,
-                name: supervisor.name,
-                email: supervisor.email,
-                phone: supervisor.phone || "",
-              }
-            : null,
-          attendance: {
-            totalRecords: attendance.length,
-            present: presentCount,
-            absent: absentCount,
-            leave: leaveCount,
-            percentage: attendancePercentage,
-            recentRecords: attendance.slice(0, 10).map((record) => ({
-              id: record.id,
-              date: record.date,
-              status: record.status,
-              checkInTime: record.checkInTime || "",
-              checkOutTime: record.checkOutTime || "",
-              notes: record.notes || "",
-            })),
-          },
-        }
-      })
-    )
-
-    // Get all evaluations with full details
-    const allEvaluations = await getEvaluationsByStudent(studentId) || []
-    const evaluationsWithDetails = allEvaluations.map((evaluation) => {
-      const evaluator = allInternships.find((i) => i.id === evaluation.internshipId)
-      return {
-        id: evaluation.id,
-        evaluationId: evaluation.evaluationId,
-        date: evaluation.evaluationDate,
-        dueDate: evaluation.dueDate,
-        overallRating: evaluation.overallRating,
-        status: evaluation.status,
-        feedback: evaluation.feedback,
-        categories: evaluation.categories || [],
-        createdAt: evaluation.createdAt,
-        updatedAt: evaluation.updatedAt,
-      }
-    })
+    // Get evaluations (last 3)
+    const allEvaluations = (await getEvaluationsByStudent(studentId)) || []
+    const recentEvaluations = allEvaluations.slice(0, 3).map((evaluation) => ({
+      id: evaluation.id,
+      evaluationId: evaluation.evaluationId,
+      date: evaluation.evaluationDate,
+      overallRating: evaluation.overallRating,
+      status: evaluation.status,
+      feedback: evaluation.feedback,
+    }))
 
     return NextResponse.json({
       student: {
@@ -125,27 +53,21 @@ export async function GET(
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
-      internships: internshipsWithDetails,
-      activeInternship: activeInternship
-        ? internshipsWithDetails.find((i) => i.id === activeInternship.id) || null
+      internship: activeInternship
+        ? {
+            id: activeInternship.id,
+            companyName: company?.name || "",
+            position: activeInternship.position,
+            department: activeInternship.department,
+            startDate: activeInternship.startDate,
+            endDate: activeInternship.endDate,
+            status: activeInternship.status,
+            supervisorName: supervisor?.name || "",
+            supervisorId: activeInternship.supervisorId,
+          }
         : null,
-      evaluations: evaluationsWithDetails,
-      totalEvaluations: evaluationsWithDetails.length,
-      summary: {
-        totalInternships: allInternships.length,
-        activeInternships: allInternships.filter((i) => i.status === "active").length,
-        completedInternships: allInternships.filter((i) => i.status === "completed").length,
-        totalEvaluations: evaluationsWithDetails.length,
-        averageRating:
-          evaluationsWithDetails.length > 0
-            ? (
-                evaluationsWithDetails
-                  .filter((e) => e.status === "reviewed")
-                  .reduce((sum, e) => sum + e.overallRating, 0) /
-                evaluationsWithDetails.filter((e) => e.status === "reviewed").length
-              ).toFixed(1)
-            : "0",
-      },
+      evaluations: recentEvaluations,
+      totalEvaluations: allEvaluations.length,
     })
   } catch (error) {
     console.error("Fetch student details error:", error)
@@ -179,14 +101,6 @@ export async function PATCH(
     const user = await getUserById(studentId)
     if (!user || user.role !== "student") {
       return NextResponse.json({ error: "Student not found" }, { status: 404 })
-    }
-
-    // Check if email is already taken by another user
-    if (email !== user.email) {
-      const existingUser = await getUserByEmail(email)
-      if (existingUser && existingUser.id !== studentId) {
-        return NextResponse.json({ error: "Email is already taken by another user" }, { status: 400 })
-      }
     }
 
     // Update user data
