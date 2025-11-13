@@ -1,5 +1,5 @@
 import { eq, and, desc } from "drizzle-orm"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import { db } from "../index"
 import { users, type User, type NewUser } from "../schema"
 
