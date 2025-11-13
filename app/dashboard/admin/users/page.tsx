@@ -247,16 +247,16 @@ export default function AdminUsers() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
+            {users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={roleColors[user.role as keyof typeof roleColors] || "outline"}
-                        >
-                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                        </Badge>
+                          <Badge
+                            variant={roleColors[user.role as keyof typeof roleColors] || "outline"}
+                          >
+                            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                          </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.status === "Active" ? "default" : "secondary"}>
@@ -319,8 +319,8 @@ export default function AdminUsers() {
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (

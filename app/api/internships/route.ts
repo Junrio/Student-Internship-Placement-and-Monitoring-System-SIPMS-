@@ -122,25 +122,25 @@ export async function POST(request: NextRequest) {
       // Get first available student to use as placeholder (required by schema)
       const allStudents = await getUsersByRole("student")
       if (allStudents.length === 0) {
-        return NextResponse.json(
+      return NextResponse.json(
           { error: "No students available. Please add students first, or assign students via the Placement page after creating the internship." },
-          { status: 400 }
-        )
-      }
+        { status: 400 }
+      )
+    }
       // Use first student as placeholder - this internship will be used as a template
       // When students are assigned via placement page, new internship records will be created
       studentIdList = [allStudents[0].id]
     }
-
+    
     // Verify all students exist
     for (const sid of studentIdList) {
       const student = await getUserById(sid)
-      if (!student || student.role !== "student") {
-        return NextResponse.json(
+    if (!student || student.role !== "student") {
+      return NextResponse.json(
           { error: `Invalid student ID: ${sid}. Student not found.` },
-          { status: 400 }
-        )
-      }
+        { status: 400 }
+      )
+    }
     }
 
     // Create one internship per student (or template internship if no students specified)
@@ -148,18 +148,18 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < studentIdList.length; i++) {
       const studentId = studentIdList[i]
       const newInternshipId = i === 0 ? internshipId : `${internshipId}-${i + 1}`
-      
-      const newInternship = await createInternship({
+
+    const newInternship = await createInternship({
         internshipId: newInternshipId,
         studentId: studentId,
-        companyId: finalCompanyId,
-        supervisorId: finalSupervisorId,
-        position,
-        department: finalDepartment,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        status: (status || "pending") as any,
-      })
+      companyId: finalCompanyId,
+      supervisorId: finalSupervisorId,
+      position,
+      department: finalDepartment,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      status: (status || "pending") as any,
+    })
       
       createdInternships.push(newInternship)
     }

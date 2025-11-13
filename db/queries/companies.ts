@@ -36,3 +36,4 @@ export async function updateCompany(id: number, companyData: Partial<NewCompany>
 
 
 
+
