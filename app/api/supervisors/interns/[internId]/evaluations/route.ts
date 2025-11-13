@@ -4,9 +4,10 @@ import { getInternshipById } from "@/db/queries/internships"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { internId: string } }
+  { params }: { params: Promise<{ internId: string }> }
 ) {
   try {
+    const { internId: internIdParam } = await params
     const userId = request.cookies.get("userId")?.value
 
     if (!userId) {
@@ -14,7 +15,7 @@ export async function GET(
     }
 
     const supervisorId = parseInt(userId, 10)
-    const internId = parseInt(params.internId, 10)
+    const internId = parseInt(internIdParam, 10)
 
     if (isNaN(supervisorId) || isNaN(internId)) {
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 })
@@ -49,6 +50,7 @@ export async function GET(
     )
   }
 }
+
 
 
 

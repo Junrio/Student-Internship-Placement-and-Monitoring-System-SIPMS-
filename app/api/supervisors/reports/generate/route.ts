@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getEvaluationsByEvaluator } from "@/db/queries/evaluations"
-import { getInternshipsBySupervisor } from "@/db/queries/internships"
+import { getInternshipsBySupervisor, getInternshipById } from "@/db/queries/internships"
 import { getUserById } from "@/db/queries/users"
 import { getCompanyById } from "@/db/queries/companies"
 
@@ -157,6 +157,7 @@ ${index + 1}. ${data.studentName} (${data.studentId})
     )
   }
 }
+
 
 
 

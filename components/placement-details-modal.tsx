@@ -227,3 +227,4 @@ export function PlacementDetailsModal({ open, onOpenChange, internshipId }: Plac
 }
 
 
+

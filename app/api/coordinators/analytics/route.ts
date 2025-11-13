@@ -88,17 +88,18 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const evaluationScoresByCompany = await Promise.all(
-      Array.from(companyEvaluationMap.entries())
-        .map(async ([companyId, stats]) => {
-          const company = await getCompanyById(companyId)
-          return {
-            company: company?.name || "Unknown Company",
-            averageScore: (stats.total / stats.count).toFixed(1),
-            evaluationCount: stats.count,
-          }
-        })
-        .then((results) => results.sort((a, b) => parseFloat(b.averageScore) - parseFloat(a.averageScore)))
+    const evaluationScoresByCompanyResults = await Promise.all(
+      Array.from(companyEvaluationMap.entries()).map(async ([companyId, stats]) => {
+        const company = await getCompanyById(companyId)
+        return {
+          company: company?.name || "Unknown Company",
+          averageScore: (stats.total / stats.count).toFixed(1),
+          evaluationCount: stats.count,
+        }
+      })
+    )
+    const evaluationScoresByCompany = evaluationScoresByCompanyResults.sort(
+      (a, b) => parseFloat(b.averageScore) - parseFloat(a.averageScore)
     )
 
     return NextResponse.json({
@@ -120,6 +121,7 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
 
 
 
